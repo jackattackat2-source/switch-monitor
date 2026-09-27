@@ -1,398 +1,481 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Switch Monitor</title>
 
 <style>
-  * {
-    box-sizing: border-box;
-  }
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: black;
+        overflow: hidden;
+    }
 
-  html, body {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    background: #000;
-    color: #fff;
-    font-family: system-ui, sans-serif;
-    overflow: hidden;
-  }
+    #screen {
+        width: 100vw;
+        height: 100vh;
 
-  /* Main screen */
-  #stage {
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+        background: black;
+        overflow: hidden;
+    }
 
-    background: #000;
-    overflow: hidden;
-  }
+    #video {
+        display: block;
 
-  /*
-    Automatically fits the entire Switch picture
-    to ANY screen size without cropping it.
-  */
-  #video {
-    display: block;
+        /*
+         * IMPORTANT:
+         * Do NOT force the video to be both
+         * 100% wide AND 100% tall.
+         *
+         * Let the browser keep the video's
+         * natural aspect ratio.
+         */
+        width: auto;
+        height: auto;
 
-    width: 100%;
-    height: 100%;
+        max-width: 100%;
+        max-height: 100%;
 
-    max-width: 100vw;
-    max-height: 100vh;
+        object-fit: contain;
 
-    object-fit: contain;
-    object-position: center center;
+        background: black;
+    }
 
-    background: #000;
+    #controls {
+        position: fixed;
 
-    transform-origin: center center;
-    transition: transform 0.15s ease;
-  }
+        bottom: 15px;
+        left: 50%;
 
-  /* Control bar */
-  #controls {
-    position: fixed;
-    left: 50%;
-    bottom: 18px;
-    transform: translateX(-50%);
+        transform: translateX(-50%);
 
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    justify-content: center;
+        display: flex;
+        align-items: center;
+        gap: 8px;
 
-    padding: 10px 12px;
-    border-radius: 14px;
+        padding: 10px;
 
-    background: rgba(20, 20, 20, 0.92);
+        background: rgba(20, 20, 20, 0.9);
 
-    max-width: calc(100vw - 24px);
-    z-index: 10;
-  }
+        border-radius: 12px;
 
-  button,
-  select {
-    border: 0;
-    border-radius: 9px;
-    padding: 9px 12px;
-    font-size: 14px;
+        z-index: 10;
+    }
 
-    background: #fff;
-    color: #111;
+    button,
+    select {
+        padding: 8px 12px;
 
-    cursor: pointer;
-  }
+        border: none;
+        border-radius: 8px;
 
-  button:hover {
-    background: #ddd;
-  }
+        font-size: 14px;
+    }
 
-  #status {
-    font-size: 13px;
-    opacity: 0.85;
-  }
+    button {
+        cursor: pointer;
+    }
 
-  #error {
-    position: fixed;
-    top: 18px;
-    left: 50%;
-    transform: translateX(-50%);
+    #status {
+        color: white;
+        font-family: Arial, sans-serif;
+        font-size: 13px;
+    }
 
-    max-width: 90vw;
-    padding: 10px 14px;
+    #error {
+        position: fixed;
 
-    border-radius: 10px;
-    background: #8b0000;
+        top: 15px;
+        left: 50%;
 
-    display: none;
-    z-index: 20;
-  }
+        transform: translateX(-50%);
 
-  .hidden {
-    display: none !important;
-  }
+        background: #900;
+        color: white;
+
+        padding: 10px 15px;
+
+        border-radius: 8px;
+
+        font-family: Arial, sans-serif;
+
+        display: none;
+
+        z-index: 20;
+    }
+
+    .hidden {
+        display: none !important;
+    }
 </style>
 </head>
 
 <body>
 
-<div id="stage">
-  <video id="video" autoplay playsinline></video>
+<div id="screen">
+
+    <video
+        id="video"
+        autoplay
+        playsinline>
+    </video>
+
 </div>
+
 
 <div id="error"></div>
 
+
 <div id="controls">
-  <button id="start">Start</button>
 
-  <select id="camera" title="Video device"></select>
+    <button id="start">
+        Start
+    </button>
 
-  <button id="mirror">Mirror: Off</button>
+    <select id="camera">
+    </select>
 
-  <button id="rotate">Rotate: 0°</button>
+    <button id="fullscreen">
+        Fullscreen
+    </button>
 
-  <button id="fullscreen">Fullscreen</button>
+    <span id="status">
+        Not connected
+    </span>
 
-  <span id="status">
-    Choose your HDMI capture device.
-  </span>
 </div>
 
-<script>
-let stream = null;
-let mirrored = false;
-let rotation = 0;
 
-const video = document.getElementById("video");
-const camera = document.getElementById("camera");
-const controls = document.getElementById("controls");
-const status = document.getElementById("status");
-const errorBox = document.getElementById("error");
+<script>
+
+let stream = null;
+
+
+const video =
+    document.getElementById("video");
+
+const camera =
+    document.getElementById("camera");
+
+const controls =
+    document.getElementById("controls");
+
+const status =
+    document.getElementById("status");
+
+const errorBox =
+    document.getElementById("error");
+
 
 
 function showError(message) {
-  errorBox.textContent = message;
-  errorBox.style.display = "block";
+
+    errorBox.textContent = message;
+
+    errorBox.style.display = "block";
+
 }
 
 
-function clearError() {
-  errorBox.style.display = "none";
+function hideError() {
+
+    errorBox.style.display = "none";
+
 }
 
-
-function updateTransform() {
-  video.style.transform =
-    `rotate(${rotation}deg) scaleX(${mirrored ? -1 : 1})`;
-}
 
 
 function stopStream() {
-  if (stream) {
-    stream.getTracks().forEach(track => track.stop());
-  }
 
-  stream = null;
-  video.srcObject = null;
+    if (stream) {
+
+        stream
+            .getTracks()
+            .forEach(track => track.stop());
+
+    }
+
+    stream = null;
+
+    video.srcObject = null;
+
 }
 
 
-async function loadDevices() {
-  const devices =
-    await navigator.mediaDevices.enumerateDevices();
 
-  const oldDevice = camera.value;
+async function getDevices() {
 
-  camera.innerHTML = "";
+    const devices =
+        await navigator
+            .mediaDevices
+            .enumerateDevices();
 
-  const videoDevices =
-    devices.filter(device => device.kind === "videoinput");
 
-  videoDevices.forEach((device, index) => {
-    const option = document.createElement("option");
+    camera.innerHTML = "";
 
-    option.value = device.deviceId;
 
-    option.textContent =
-      device.label || `Video device ${index + 1}`;
+    const cameras =
+        devices.filter(
+            device =>
+                device.kind === "videoinput"
+        );
 
-    camera.appendChild(option);
-  });
 
-  if (
-    videoDevices.some(
-      device => device.deviceId === oldDevice
-    )
-  ) {
-    camera.value = oldDevice;
-  }
+    cameras.forEach((device, index) => {
 
-  return videoDevices;
+        const option =
+            document.createElement("option");
+
+        option.value =
+            device.deviceId;
+
+        option.textContent =
+            device.label ||
+            `Video device ${index + 1}`;
+
+        camera.appendChild(option);
+
+    });
+
+
+    return cameras;
+
 }
+
 
 
 async function startCamera() {
-  clearError();
-  stopStream();
 
-  try {
+    hideError();
 
-    /*
-      Ask Chrome for camera permission first.
-      This allows the capture-card name to appear.
-    */
-    await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: false
-    });
+    stopStream();
 
-    const devices = await loadDevices();
-
-    if (!devices.length) {
-      throw new Error("No video device was found.");
-    }
-
-    const deviceId =
-      camera.value || devices[0].deviceId;
-
-
-    /*
-      Connect to the selected HDMI capture card.
-    */
-    stream =
-      await navigator.mediaDevices.getUserMedia({
-        video: {
-          deviceId: {
-            exact: deviceId
-          }
-        },
-        audio: false
-      });
-
-
-    video.srcObject = stream;
-
-    await video.play();
-
-    status.textContent = "Live";
-  }
-
-  catch (error) {
-
-    showError(
-      "Could not open the capture device: " +
-      (error.message || error.name)
-    );
-
-    status.textContent = "Not connected";
-  }
-}
-
-
-/* Start button */
-document
-  .getElementById("start")
-  .addEventListener("click", startCamera);
-
-
-/* Change capture device */
-camera.addEventListener("change", startCamera);
-
-
-/* Mirror */
-document
-  .getElementById("mirror")
-  .addEventListener("click", () => {
-
-    mirrored = !mirrored;
-
-    document.getElementById("mirror").textContent =
-      `Mirror: ${mirrored ? "On" : "Off"}`;
-
-    updateTransform();
-  });
-
-
-/* Rotate */
-document
-  .getElementById("rotate")
-  .addEventListener("click", () => {
-
-    rotation = (rotation + 90) % 360;
-
-    document.getElementById("rotate").textContent =
-      `Rotate: ${rotation}°`;
-
-    updateTransform();
-  });
-
-
-/* Fullscreen */
-document
-  .getElementById("fullscreen")
-  .addEventListener("click", async () => {
 
     try {
 
-      if (!document.fullscreenElement) {
+        /*
+         * Request permission first.
+         */
+        await navigator.mediaDevices
+            .getUserMedia({
+                video: true,
+                audio: false
+            });
 
-        await document.documentElement.requestFullscreen();
 
-      } else {
+        const devices =
+            await getDevices();
 
-        await document.exitFullscreen();
 
-      }
+        if (devices.length === 0) {
+
+            throw new Error(
+                "No camera or HDMI capture device found."
+            );
+
+        }
+
+
+        const selectedDevice =
+            camera.value ||
+            devices[0].deviceId;
+
+
+        /*
+         * Open the selected HDMI capture card.
+         */
+        stream =
+            await navigator.mediaDevices
+                .getUserMedia({
+
+                    video: {
+                        deviceId: {
+                            exact: selectedDevice
+                        }
+                    },
+
+                    audio: false
+
+                });
+
+
+        video.srcObject = stream;
+
+
+        /*
+         * Wait until the browser knows
+         * the actual video dimensions.
+         */
+        await new Promise(resolve => {
+
+            if (video.readyState >= 1) {
+
+                resolve();
+
+            } else {
+
+                video.onloadedmetadata =
+                    resolve;
+
+            }
+
+        });
+
+
+        await video.play();
+
+
+        status.textContent =
+            "Live";
+
+
+        console.log(
+            "Capture resolution:",
+            video.videoWidth,
+            "x",
+            video.videoHeight
+        );
 
     }
 
     catch (error) {
 
-      showError(
-        "Fullscreen was blocked by the browser."
-      );
+        console.error(error);
+
+        status.textContent =
+            "Not connected";
+
+
+        showError(
+            "Could not open capture device: " +
+            (error.message || error.name)
+        );
 
     }
-  });
+
+}
+
 
 
 /*
-  Hide controls while fullscreen.
-*/
-document.addEventListener(
-  "fullscreenchange",
-  () => {
-
-    controls.classList.toggle(
-      "hidden",
-      Boolean(document.fullscreenElement)
+ * Start
+ */
+document
+    .getElementById("start")
+    .addEventListener(
+        "click",
+        startCamera
     );
 
-  }
+
+
+/*
+ * Change capture device
+ */
+camera.addEventListener(
+    "change",
+    startCamera
 );
 
 
+
 /*
-  Load available video devices when the page opens.
-*/
-window.addEventListener("load", async () => {
+ * Fullscreen
+ */
+document
+    .getElementById("fullscreen")
+    .addEventListener(
+        "click",
+        async () => {
 
-  if (
-    !navigator.mediaDevices ||
-    !navigator.mediaDevices.getUserMedia
-  ) {
+            try {
 
-    showError(
-      "Camera access is not available here. " +
-      "Open this page using HTTPS."
+                if (!document.fullscreenElement) {
+
+                    await document
+                        .documentElement
+                        .requestFullscreen();
+
+                } else {
+
+                    await document
+                        .exitFullscreen();
+
+                }
+
+            }
+
+            catch (error) {
+
+                showError(
+                    "Fullscreen was blocked."
+                );
+
+            }
+
+        }
     );
 
-    return;
-  }
 
-  try {
 
-    await loadDevices();
+/*
+ * Hide controls in fullscreen.
+ */
+document.addEventListener(
+    "fullscreenchange",
+    () => {
 
-  } catch (error) {
+        if (document.fullscreenElement) {
 
-    /*
-      Device names may not appear until
-      permission has been granted.
-    */
+            controls.classList.add(
+                "hidden"
+            );
 
-  }
+        } else {
 
-});
+            controls.classList.remove(
+                "hidden"
+            );
+
+        }
+
+    }
+);
+
+
+
+/*
+ * Load devices when page opens.
+ */
+window.addEventListener(
+    "load",
+    async () => {
+
+        try {
+
+            await getDevices();
+
+        } catch (error) {
+
+            console.log(
+                "Waiting for camera permission."
+            );
+
+        }
+
+    }
+);
+
 </script>
 
 </body>
