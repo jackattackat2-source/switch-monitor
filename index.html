@@ -7,121 +7,128 @@
 <title>Switch Monitor</title>
 
 <style>
-    * {
-        box-sizing: border-box;
-    }
+* {
+    box-sizing: border-box;
+}
 
-    html,
-    body {
-        margin: 0;
-        padding: 0;
-        width: 100%;
-        height: 100%;
-        background: #000;
-        overflow: hidden;
-    }
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: black;
+    overflow: hidden;
+}
 
-    #screen {
-        position: fixed;
-        inset: 0;
+#screen {
+    position: fixed;
+    inset: 0;
 
-        width: 100vw;
-        height: 100vh;
+    width: 100vw;
+    height: 100vh;
 
-        background: #000;
+    background: black;
 
-        display: flex;
-        justify-content: center;
-        align-items: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-        overflow: hidden;
-    }
+    overflow: hidden;
+}
 
-    #video {
-        display: block;
+#video {
+    display: block;
 
-        width: 100%;
-        height: 100%;
+    width: 100%;
+    height: 100%;
 
-        object-fit: contain;
-        object-position: center;
+    object-fit: contain;
+    object-position: center;
 
-        background: #000;
-    }
+    background: black;
+}
 
-    #controls {
-        position: fixed;
+#controls {
+    position: fixed;
 
-        left: 50%;
-        bottom: 15px;
+    left: 50%;
+    bottom: 15px;
 
-        transform: translateX(-50%);
+    transform: translateX(-50%);
 
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-wrap: wrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
 
-        gap: 8px;
+    gap: 8px;
 
-        padding: 10px 12px;
+    padding: 10px 12px;
 
-        background: rgba(20, 20, 20, 0.92);
+    background: rgba(20, 20, 20, 0.92);
 
-        border-radius: 12px;
+    border-radius: 12px;
 
-        z-index: 10;
+    z-index: 10;
 
-        font-family: Arial, sans-serif;
-    }
+    font-family: Arial, sans-serif;
+}
 
-    button,
-    select {
-        border: none;
-        border-radius: 8px;
+button,
+select {
+    border: none;
+    border-radius: 8px;
 
-        padding: 9px 12px;
+    padding: 9px 12px;
 
-        font-size: 14px;
-    }
+    font-size: 14px;
 
-    button {
-        cursor: pointer;
-    }
+    background: white;
+    color: black;
+}
 
-    #status {
-        color: white;
-        font-size: 13px;
-        white-space: nowrap;
-    }
+button {
+    cursor: pointer;
+}
 
-    #error {
-        position: fixed;
+button:hover {
+    background: #ddd;
+}
 
-        top: 15px;
-        left: 50%;
+#status {
+    color: white;
+    font-size: 13px;
+    white-space: nowrap;
+}
 
-        transform: translateX(-50%);
+#error {
+    position: fixed;
 
-        max-width: 90vw;
+    top: 15px;
+    left: 50%;
 
-        padding: 10px 15px;
+    transform: translateX(-50%);
 
-        background: #900;
-        color: white;
+    max-width: 90vw;
 
-        border-radius: 8px;
+    padding: 10px 15px;
 
-        display: none;
+    background: #900;
+    color: white;
 
-        z-index: 20;
+    border-radius: 8px;
 
-        font-family: Arial, sans-serif;
-    }
+    display: none;
 
-    .hidden {
-        display: none !important;
-    }
+    z-index: 20;
+
+    font-family: Arial, sans-serif;
+}
+
+.hidden {
+    display: none !important;
+}
 </style>
 </head>
 
@@ -147,7 +154,11 @@
         Start
     </button>
 
-    <select id="camera"></select>
+    <select id="camera">
+        <option value="">
+            Select capture device
+        </option>
+    </select>
 
     <button id="fullscreen">
         Fullscreen
@@ -163,7 +174,6 @@
 <script>
 
 let stream = null;
-
 
 const video =
     document.getElementById("video");
@@ -181,205 +191,177 @@ const errorBox =
     document.getElementById("error");
 
 
+/* =========================
+   ERROR DISPLAY
+========================= */
 
 function showError(message) {
 
     errorBox.textContent = message;
 
     errorBox.style.display = "block";
-
 }
 
 
 function clearError() {
 
     errorBox.style.display = "none";
-
 }
 
 
-
-/* Stop existing video */
+/* =========================
+   STOP CURRENT STREAM
+========================= */
 
 function stopStream() {
 
     if (stream) {
 
-        stream.getTracks().forEach(
-            track => track.stop()
-        );
+        stream.getTracks().forEach(track => {
+            track.stop();
+        });
 
     }
 
     stream = null;
 
     video.srcObject = null;
-
 }
 
 
-
-/* Find video devices */
+/* =========================
+   GET VIDEO DEVICES
+========================= */
 
 async function loadDevices() {
 
     const devices =
-        await navigator
-            .mediaDevices
-            .enumerateDevices();
+        await navigator.mediaDevices.enumerateDevices();
+
+
+    const previousDevice =
+        camera.value;
 
 
     camera.innerHTML = "";
 
 
-    const videos =
+    const firstOption =
+        document.createElement("option");
+
+    firstOption.value = "";
+
+    firstOption.textContent =
+        "Select capture device";
+
+    camera.appendChild(firstOption);
+
+
+    const videoDevices =
         devices.filter(
             device =>
                 device.kind === "videoinput"
         );
 
 
-    videos.forEach((device, index) => {
+    videoDevices.forEach((device, index) => {
 
         const option =
             document.createElement("option");
 
+
         option.value =
             device.deviceId;
 
+
+        /*
+         * Chrome may hide the device name
+         * until permission is granted.
+         */
         option.textContent =
             device.label ||
             `Video device ${index + 1}`;
+
 
         camera.appendChild(option);
 
     });
 
 
-    return videos;
+    /*
+     * Keep the previously selected device
+     * if it still exists.
+     */
+    if (
+        videoDevices.some(
+            device =>
+                device.deviceId ===
+                previousDevice
+        )
+    ) {
 
+        camera.value =
+            previousDevice;
+
+    }
+
+
+    return videoDevices;
 }
 
 
+/* =========================
+   START SELECTED DEVICE
+========================= */
 
-/*
- * Start the capture card.
- */
-
-async function startCamera() {
+async function startSelectedDevice() {
 
     clearError();
+
+
+    const deviceId =
+        camera.value;
+
+
+    if (!deviceId) {
+
+        showError(
+            "Select your USB HDMI capture device first."
+        );
+
+        return;
+    }
+
 
     stopStream();
 
 
     try {
 
-        /*
-         * First request permission.
-         * This is important on ChromeOS.
-         */
-        const permissionStream =
-            await navigator
-                .mediaDevices
-                .getUserMedia({
-                    video: true,
-                    audio: false
-                });
+        status.textContent =
+            "Connecting...";
 
 
         /*
-         * Stop the temporary stream.
-         */
-        permissionStream
-            .getTracks()
-            .forEach(track => track.stop());
-
-
-        /*
-         * Now Chrome gives us the device names.
-         */
-        const devices =
-            await loadDevices();
-
-
-        if (!devices.length) {
-
-            throw new Error(
-                "No video device found."
-            );
-
-        }
-
-
-        /*
-         * Try to find the HDMI capture card.
-         */
-        let selected =
-            devices.find(device => {
-
-                const name =
-                    (device.label || "")
-                        .toLowerCase();
-
-                return (
-                    name.includes("capture") ||
-                    name.includes("hdmi") ||
-                    name.includes("usb video") ||
-                    name.includes("video")
-                );
-
-            });
-
-
-        /*
-         * If it wasn't recognized,
-         * use the currently selected device.
-         */
-        if (!selected) {
-
-            selected =
-                devices.find(
-                    device =>
-                        device.deviceId ===
-                        camera.value
-                );
-
-        }
-
-
-        /*
-         * Otherwise use the first device.
-         */
-        if (!selected) {
-
-            selected =
-                devices[0];
-
-        }
-
-
-        camera.value =
-            selected.deviceId;
-
-
-        /*
-         * Open the capture device.
-         *
          * IMPORTANT:
-         * We don't force a resolution.
-         * The capture card chooses its
-         * normal resolution.
+         *
+         * We request ONLY the device
+         * selected in the dropdown.
+         *
+         * We do NOT call:
+         *
+         * getUserMedia({video:true})
+         *
+         * because that can select the
+         * Chromebook's built-in camera.
          */
         stream =
-            await navigator
-                .mediaDevices
+            await navigator.mediaDevices
                 .getUserMedia({
 
                     video: {
                         deviceId: {
-                            exact:
-                                selected.deviceId
+                            exact: deviceId
                         }
                     },
 
@@ -388,8 +370,46 @@ async function startCamera() {
                 });
 
 
+        /*
+         * Put the selected USB capture
+         * stream into the video element.
+         */
         video.srcObject =
             stream;
+
+
+        /*
+         * Wait for the video to load.
+         */
+        await new Promise((resolve, reject) => {
+
+            if (video.readyState >= 1) {
+
+                resolve();
+
+                return;
+            }
+
+
+            video.onloadedmetadata =
+                () => resolve();
+
+
+            setTimeout(() => {
+
+                if (video.readyState < 1) {
+
+                    reject(
+                        new Error(
+                            "Video did not start."
+                        )
+                    );
+
+                }
+
+            }, 5000);
+
+        });
 
 
         await video.play();
@@ -400,53 +420,159 @@ async function startCamera() {
 
 
         console.log(
-            "Capture:",
+            "Capture resolution:",
             video.videoWidth,
             "x",
             video.videoHeight
         );
 
-    }
 
-    catch (error) {
+    } catch (error) {
 
         console.error(error);
 
+
+        stopStream();
+
+
         status.textContent =
-            "Not connected";
+            "Connection failed";
+
 
         showError(
-            "Could not open capture card: " +
+            "Could not open the selected USB capture device: " +
             (error.message || error.name)
         );
 
     }
-
 }
 
 
+/* =========================
+   INITIAL DEVICE SETUP
+========================= */
 
-/* Start */
+async function initializeDevices() {
+
+    try {
+
+        /*
+         * We intentionally DON'T request
+         * a generic camera here.
+         *
+         * That was causing Chrome to
+         * switch to the Chromebook camera.
+         */
+
+        const devices =
+            await loadDevices();
+
+
+        if (devices.length === 0) {
+
+            status.textContent =
+                "No video devices found.";
+
+            return;
+        }
+
+
+        /*
+         * Try to automatically select
+         * a likely USB/HDMI capture device.
+         */
+        const capture =
+            devices.find(device => {
+
+                const name =
+                    (device.label || "")
+                        .toLowerCase();
+
+
+                return (
+                    name.includes("capture") ||
+                    name.includes("hdmi") ||
+                    name.includes("usb video") ||
+                    name.includes("usb capture")
+                );
+
+            });
+
+
+        if (capture) {
+
+            camera.value =
+                capture.deviceId;
+
+        }
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        status.textContent =
+            "Waiting for device permission.";
+
+    }
+}
+
+
+/* =========================
+   START BUTTON
+========================= */
 
 document
     .getElementById("start")
     .addEventListener(
         "click",
-        startCamera
+        async () => {
+
+            /*
+             * If device names aren't available yet,
+             * get permission for the selected device.
+             */
+            if (!camera.value) {
+
+                showError(
+                    "Select the USB HDMI capture device."
+                );
+
+                return;
+            }
+
+
+            await startSelectedDevice();
+
+        }
     );
 
 
-
-/* Switch capture device */
+/* =========================
+   DEVICE DROPDOWN
+========================= */
 
 camera.addEventListener(
     "change",
-    startCamera
+    async () => {
+
+        /*
+         * Selecting a device immediately
+         * connects to THAT device.
+         */
+        if (camera.value) {
+
+            await startSelectedDevice();
+
+        }
+
+    }
 );
 
 
-
-/* Fullscreen */
+/* =========================
+   FULLSCREEN
+========================= */
 
 document
     .getElementById("fullscreen")
@@ -471,12 +597,10 @@ document
 
                 }
 
-            }
-
-            catch (error) {
+            } catch (error) {
 
                 showError(
-                    "Fullscreen was blocked."
+                    "Fullscreen was blocked by the browser."
                 );
 
             }
@@ -485,42 +609,69 @@ document
     );
 
 
-
-/* Hide controls in fullscreen */
+/* =========================
+   FULLSCREEN CONTROLS
+========================= */
 
 document.addEventListener(
     "fullscreenchange",
     () => {
 
-        controls.classList.toggle(
-            "hidden",
-            !!document.fullscreenElement
-        );
+        if (document.fullscreenElement) {
+
+            controls.classList.add(
+                "hidden"
+            );
+
+        } else {
+
+            controls.classList.remove(
+                "hidden"
+            );
+
+        }
 
     }
 );
 
 
-
-/*
- * Load devices on startup.
- */
+/* =========================
+   PAGE LOAD
+========================= */
 
 window.addEventListener(
     "load",
     async () => {
 
-        try {
+        if (
+            !navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia
+        ) {
 
-            await loadDevices();
+            showError(
+                "Camera access is not available. " +
+                "Make sure you are using the HTTPS GitHub Pages website."
+            );
 
+            return;
         }
 
-        catch (error) {
 
-            console.log(error);
+        await initializeDevices();
 
-        }
+    }
+);
+
+
+/* =========================
+   CLEAN UP WHEN LEAVING
+========================= */
+
+window.addEventListener(
+    "beforeunload",
+    () => {
+
+        stopStream();
 
     }
 );
