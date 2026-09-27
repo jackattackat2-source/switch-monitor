@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,110 +7,121 @@
 <title>Switch Monitor</title>
 
 <style>
-html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    background: black;
-    overflow: hidden;
-}
+    * {
+        box-sizing: border-box;
+    }
 
-#screen {
-    position: fixed;
-    inset: 0;
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+    }
 
-    width: 100vw;
-    height: 100vh;
+    #screen {
+        position: fixed;
+        inset: 0;
 
-    background: black;
+        width: 100vw;
+        height: 100vh;
 
-    display: flex;
-    justify-content: center;
-    align-items: center;
+        background: #000;
 
-    overflow: hidden;
-}
+        display: flex;
+        justify-content: center;
+        align-items: center;
 
-#video {
-    display: block;
+        overflow: hidden;
+    }
 
-    background: black;
+    #video {
+        display: block;
 
-    /* JS will set these */
-    width: 0;
-    height: 0;
+        width: 100%;
+        height: 100%;
 
-    max-width: none;
-    max-height: none;
+        object-fit: contain;
+        object-position: center;
 
-    object-fit: fill;
-}
+        background: #000;
+    }
 
-#controls {
-    position: fixed;
+    #controls {
+        position: fixed;
 
-    left: 50%;
-    bottom: 15px;
+        left: 50%;
+        bottom: 15px;
 
-    transform: translateX(-50%);
+        transform: translateX(-50%);
 
-    background: rgba(20,20,20,.92);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
 
-    padding: 10px;
+        gap: 8px;
 
-    border-radius: 12px;
+        padding: 10px 12px;
 
-    display: flex;
-    align-items: center;
-    gap: 8px;
+        background: rgba(20, 20, 20, 0.92);
 
-    z-index: 10;
+        border-radius: 12px;
 
-    font-family: Arial, sans-serif;
-}
+        z-index: 10;
 
-button,
-select {
-    padding: 8px 12px;
-    border: none;
-    border-radius: 7px;
-}
+        font-family: Arial, sans-serif;
+    }
 
-button {
-    cursor: pointer;
-}
+    button,
+    select {
+        border: none;
+        border-radius: 8px;
 
-#status {
-    color: white;
-    font-size: 13px;
-}
+        padding: 9px 12px;
 
-#error {
-    position: fixed;
+        font-size: 14px;
+    }
 
-    top: 15px;
-    left: 50%;
+    button {
+        cursor: pointer;
+    }
 
-    transform: translateX(-50%);
+    #status {
+        color: white;
+        font-size: 13px;
+        white-space: nowrap;
+    }
 
-    padding: 10px 15px;
+    #error {
+        position: fixed;
 
-    background: #900;
-    color: white;
+        top: 15px;
+        left: 50%;
 
-    border-radius: 8px;
+        transform: translateX(-50%);
 
-    display: none;
+        max-width: 90vw;
 
-    z-index: 20;
+        padding: 10px 15px;
 
-    font-family: Arial, sans-serif;
-}
+        background: #900;
+        color: white;
 
-.hidden {
-    display: none !important;
-}
+        border-radius: 8px;
+
+        display: none;
+
+        z-index: 20;
+
+        font-family: Arial, sans-serif;
+    }
+
+    .hidden {
+        display: none !important;
+    }
 </style>
 </head>
 
@@ -151,11 +162,11 @@ button {
 
 <script>
 
+let stream = null;
+
+
 const video =
     document.getElementById("video");
-
-const screen =
-    document.getElementById("screen");
 
 const camera =
     document.getElementById("camera");
@@ -170,12 +181,6 @@ const errorBox =
     document.getElementById("error");
 
 
-let stream = null;
-
-
-/* -------------------------------- */
-/* Error handling */
-/* -------------------------------- */
 
 function showError(message) {
 
@@ -186,24 +191,23 @@ function showError(message) {
 }
 
 
-function hideError() {
+function clearError() {
 
     errorBox.style.display = "none";
 
 }
 
 
-/* -------------------------------- */
-/* Stop current capture */
-/* -------------------------------- */
+
+/* Stop existing video */
 
 function stopStream() {
 
     if (stream) {
 
-        stream
-            .getTracks()
-            .forEach(track => track.stop());
+        stream.getTracks().forEach(
+            track => track.stop()
+        );
 
     }
 
@@ -214,11 +218,10 @@ function stopStream() {
 }
 
 
-/* -------------------------------- */
-/* Find capture devices */
-/* -------------------------------- */
 
-async function getDevices() {
+/* Find video devices */
+
+async function loadDevices() {
 
     const devices =
         await navigator
@@ -229,14 +232,14 @@ async function getDevices() {
     camera.innerHTML = "";
 
 
-    const cameras =
+    const videos =
         devices.filter(
             device =>
                 device.kind === "videoinput"
         );
 
 
-    cameras.forEach((device, index) => {
+    videos.forEach((device, index) => {
 
         const option =
             document.createElement("option");
@@ -246,126 +249,26 @@ async function getDevices() {
 
         option.textContent =
             device.label ||
-            "Video device " + (index + 1);
+            `Video device ${index + 1}`;
 
         camera.appendChild(option);
 
     });
 
 
-    return cameras;
+    return videos;
 
 }
 
 
-/* -------------------------------- */
-/* FIT VIDEO PERFECTLY */
-/* -------------------------------- */
 
-function fitVideo() {
-
-    const videoWidth =
-        video.videoWidth;
-
-    const videoHeight =
-        video.videoHeight;
-
-
-    if (
-        !videoWidth ||
-        !videoHeight
-    ) {
-        return;
-    }
-
-
-    const screenWidth =
-        window.innerWidth;
-
-    const screenHeight =
-        window.innerHeight;
-
-
-    /*
-     * Aspect ratio of the capture.
-     */
-    const videoRatio =
-        videoWidth / videoHeight;
-
-
-    /*
-     * Aspect ratio of the screen.
-     */
-    const screenRatio =
-        screenWidth / screenHeight;
-
-
-    let width;
-    let height;
-
-
-    /*
-     * The video is wider than the screen.
-     */
-    if (videoRatio > screenRatio) {
-
-        width =
-            screenWidth;
-
-        height =
-            width / videoRatio;
-
-    }
-
-
-    /*
-     * The video is taller than the screen.
-     */
-    else {
-
-        height =
-            screenHeight;
-
-        width =
-            height * videoRatio;
-
-    }
-
-
-    /*
-     * Apply the exact calculated size.
-     */
-    video.style.width =
-        Math.round(width) + "px";
-
-    video.style.height =
-        Math.round(height) + "px";
-
-
-    console.log(
-        "Video:",
-        videoWidth,
-        "x",
-        videoHeight
-    );
-
-    console.log(
-        "Displayed:",
-        Math.round(width),
-        "x",
-        Math.round(height)
-    );
-
-}
-
-
-/* -------------------------------- */
-/* Start capture */
-/* -------------------------------- */
+/*
+ * Start the capture card.
+ */
 
 async function startCamera() {
 
-    hideError();
+    clearError();
 
     stopStream();
 
@@ -373,18 +276,31 @@ async function startCamera() {
     try {
 
         /*
-         * Ask Chrome for permission.
+         * First request permission.
+         * This is important on ChromeOS.
          */
-        await navigator
-            .mediaDevices
-            .getUserMedia({
-                video: true,
-                audio: false
-            });
+        const permissionStream =
+            await navigator
+                .mediaDevices
+                .getUserMedia({
+                    video: true,
+                    audio: false
+                });
 
 
+        /*
+         * Stop the temporary stream.
+         */
+        permissionStream
+            .getTracks()
+            .forEach(track => track.stop());
+
+
+        /*
+         * Now Chrome gives us the device names.
+         */
         const devices =
-            await getDevices();
+            await loadDevices();
 
 
         if (!devices.length) {
@@ -396,13 +312,64 @@ async function startCamera() {
         }
 
 
-        const deviceId =
-            camera.value ||
-            devices[0].deviceId;
+        /*
+         * Try to find the HDMI capture card.
+         */
+        let selected =
+            devices.find(device => {
+
+                const name =
+                    (device.label || "")
+                        .toLowerCase();
+
+                return (
+                    name.includes("capture") ||
+                    name.includes("hdmi") ||
+                    name.includes("usb video") ||
+                    name.includes("video")
+                );
+
+            });
 
 
         /*
-         * Open selected capture card.
+         * If it wasn't recognized,
+         * use the currently selected device.
+         */
+        if (!selected) {
+
+            selected =
+                devices.find(
+                    device =>
+                        device.deviceId ===
+                        camera.value
+                );
+
+        }
+
+
+        /*
+         * Otherwise use the first device.
+         */
+        if (!selected) {
+
+            selected =
+                devices[0];
+
+        }
+
+
+        camera.value =
+            selected.deviceId;
+
+
+        /*
+         * Open the capture device.
+         *
+         * IMPORTANT:
+         * We don't force a resolution.
+         * The capture card chooses its
+         * normal resolution.
          */
         stream =
             await navigator
@@ -411,7 +378,8 @@ async function startCamera() {
 
                     video: {
                         deviceId: {
-                            exact: deviceId
+                            exact:
+                                selected.deviceId
                         }
                     },
 
@@ -424,50 +392,31 @@ async function startCamera() {
             stream;
 
 
-        /*
-         * Wait for video dimensions.
-         */
-        await new Promise(resolve => {
-
-            if (
-                video.readyState >= 1
-            ) {
-
-                resolve();
-
-            } else {
-
-                video.onloadedmetadata =
-                    resolve;
-
-            }
-
-        });
-
-
         await video.play();
 
 
-        /*
-         * NOW calculate exact size.
-         */
-        fitVideo();
-
-
         status.textContent =
-            "Live";
+            "Switch Live";
 
 
-    } catch (error) {
+        console.log(
+            "Capture:",
+            video.videoWidth,
+            "x",
+            video.videoHeight
+        );
+
+    }
+
+    catch (error) {
 
         console.error(error);
 
         status.textContent =
             "Not connected";
 
-
         showError(
-            "Could not open capture device: " +
+            "Could not open capture card: " +
             (error.message || error.name)
         );
 
@@ -476,118 +425,98 @@ async function startCamera() {
 }
 
 
-/* -------------------------------- */
-/* Recalculate whenever screen */
-/* changes size */
-/* -------------------------------- */
 
-window.addEventListener(
-    "resize",
-    fitVideo
-);
-
-
-/* -------------------------------- */
-/* Buttons */
-/* -------------------------------- */
+/* Start */
 
 document
     .getElementById("start")
-    .onclick =
-    startCamera;
+    .addEventListener(
+        "click",
+        startCamera
+    );
 
 
-camera.onchange =
-    startCamera;
+
+/* Switch capture device */
+
+camera.addEventListener(
+    "change",
+    startCamera
+);
 
 
-/* -------------------------------- */
+
 /* Fullscreen */
-/* -------------------------------- */
 
 document
     .getElementById("fullscreen")
-    .onclick =
-    async function() {
+    .addEventListener(
+        "click",
+        async () => {
 
-        try {
+            try {
 
-            if (
-                !document.fullscreenElement
-            ) {
+                if (
+                    !document.fullscreenElement
+                ) {
 
-                await document
-                    .documentElement
-                    .requestFullscreen();
+                    await document
+                        .documentElement
+                        .requestFullscreen();
 
-            } else {
+                } else {
 
-                await document
-                    .exitFullscreen();
+                    await document
+                        .exitFullscreen();
+
+                }
 
             }
 
-        } catch (error) {
+            catch (error) {
 
-            showError(
-                "Fullscreen was blocked."
-            );
+                showError(
+                    "Fullscreen was blocked."
+                );
+
+            }
 
         }
+    );
 
-    };
 
 
-/* -------------------------------- */
-/* Fullscreen changed */
-/* -------------------------------- */
+/* Hide controls in fullscreen */
 
 document.addEventListener(
     "fullscreenchange",
-    function() {
+    () => {
 
-        if (
-            document.fullscreenElement
-        ) {
-
-            controls.classList.add(
-                "hidden"
-            );
-
-        } else {
-
-            controls.classList.remove(
-                "hidden"
-            );
-
-        }
-
-
-        /*
-         * Recalculate after fullscreen.
-         */
-        setTimeout(
-            fitVideo,
-            100
+        controls.classList.toggle(
+            "hidden",
+            !!document.fullscreenElement
         );
 
     }
 );
 
 
-/* -------------------------------- */
-/* Initial device list */
-/* -------------------------------- */
+
+/*
+ * Load devices on startup.
+ */
 
 window.addEventListener(
     "load",
-    async function() {
+    async () => {
 
         try {
 
-            await getDevices();
+            await loadDevices();
 
-        } catch (error) {
+        }
+
+        catch (error) {
 
             console.log(error);
 
